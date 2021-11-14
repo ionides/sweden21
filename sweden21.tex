@@ -1,0 +1,615 @@
+%\documentclass[handout]{beamer}
+\documentclass{beamer}
+
+\usepackage{amsmath,amsfonts,amssymb,graphicx} 
+\input{header.tex}
+\input{header-ms.tex}
+\input{theorems1.tex}
+
+\begin{document}
+
+\begin{frame}
+\begin{center}
+  {\Large\bf Island filters for inference on metapopulation dynamics, with epidemiological applications}
+
+%% Infectious disease transmission is a nonlinear partially observed stochastic dynamic system with topical interest. For low-dimensional systems, models can be fitted to time series data using Monte Carlo particle filter methods. As dimension increases, for example when analyzing epidemics among a collection of spatially coupled populations, particle filter methods rapidly degenerate. We show that many independent Monte Carlo calculations, each of which does not attempt to solve the filtering problem, can be combined to give a global filtering solution with favorable theoretical scaling properties under a weak coupling condition. The independent Monte Carlo calculations are called islands, and the operation carried out on each island is called adapted simulation, so the complete algorithm is called an adapted simulation island filter. We demonstrate this methodology and some related algorithms on a model for measles transmission within and between cities. The COVID-19 situation will also be discussed.
+
+
+\vspace{2mm}
+
+Edward Ionides\\
+University of Michigan, Department of Statistics
+
+\vspace{8mm}
+
+Department seminar
+\\
+Friday March 20, 2020
+
+%% 16:40 -> 17:10
+
+\vspace{8mm}
+
+Based on \url{https://arxiv.org/abs/2002.05211}\\
+In collaboration with Kidus Asfaw, Joonha Park and Aaron King\\
+
+\end{center}
+
+\end{frame}
+
+\newcommand\challengeSep{\vspace{2mm}}
+
+
+\begin{frame}
+  \frametitle{Background}
+
+  \myemph{The curse of dimensionality}. Particle filter (PF) methods are effective for inference on low-dimensional nonlinear partially observed stochastic dynamic systems. They scale exponentially badly.
+
+  \vspace{10mm}
+  
+  \myemph{Independent island filters}. We study three algorithms that combine many non-interacting Monte Carlo processes.
+
+  \vspace{3mm}
+  
+  \begin{myitemize}
+  \item Basic island filter (BIF)
+  \item Adapted simulation island filter (ASIF)
+    \item Adapted simulation island filter with intermediate resampling (ASIF-IR)
+  \end{myitemize}
+
+  \vspace{10mm}
+
+  \myemph{Metapopulation dynamics}. Island filters have theoretical and empirical scaling properties suited to collections of weakly coupled populations.
+
+\end{frame}
+\begin{frame}
+
+  \frametitle{So, what about COVID-19?}
+
+  \begin{myitemize}
+  \item Researchers have developed many models for disease spread.
+  \item Most of these build on the SIR (Susceptible-Infected-Removed) model that divides a population into three homogeneous classes.
+    \item Extensions can include a latent period after infection, age structure, spatial structure, temperature, control policies.
+    \item We may observe some fraction of cases.
+    \item These models are partially observed stochastic dynamic systems.      
+    \item Understanding of COVID-19 epidemiology draws on analysis of previous epidemics combined with assessment of limited available data.
+      \item Methods that fit a general class of mechanistic models assist with formulating and testing scientific hypotheses.
+      \end{myitemize}
+
+\end{frame}
+
+
+\begin{frame}
+
+  \frametitle{What is a SpatPOMP?}
+
+  \myemph{POMP} models are partially observed Markov processes, also known as state space models or hidden Markov models
+
+  \vspace{6mm}
+  
+  \myemph{SpatPOMP} models are POMP models with a unit structure
+
+    \vspace{6mm}
+ 
+  \myemph{Latent Markov process}: $X_{\unit\comma\time}=X_{\unit}(t_\time)$, \hspace{1mm} $\unit\in 1{\mycolon}\Unit$, \hspace{1mm} $\time\in 1{\mycolon}\Time$
+
+    \vspace{6mm}
+ 
+  \myemph{Observation process}: $Y_{\unit\comma\time}$ depends only on $X_{\unit\comma\time}$
+
+    \vspace{6mm}
+ 
+The units could be a metapopulation, say cities in an epidemic model
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{$U=40$ units for a coupled measles SEIR model}
+
+\vspace{-5mm}
+
+\begin{center}
+\includegraphics[width=12cm]{slice_image_plot-1.pdf}
+
+
+\end{center}
+
+\vspace{-2mm}
+
+Simulated data using a gravity model with geography, demography and transmission parameters corresponding to UK pre-vaccination measles.
+
+%\end{center}
+
+\end{frame}
+
+
+
+\begin{frame}
+
+  \vspace{8mm}
+  
+\noindent\begin{tabular}{l}
+\hline
+\inputSpace {\bf Island filter inputs, outputs and implicit loops.}\\
+\hline
+\inputSpace {\bf input:}
+\\
+simulator for $f_{\vec{X}_0}(\vec{x}_0)$ and $f_{\vec{X}_{\time}|\vec{X}_{\time-1}}(\vec{x}_{\time}\given \vec{x}_{\time-1})$\\
+    evaluator for $f_{{Y}_{\unit\comma\time}|{X}_{\unit\comma\time}}({y}_{\unit\comma\time}\given {x}_{\unit\comma\time})$\\
+    number of islands, $\Island$\\
+    neighborhood structure, $B_{\unit\comma\time}$\\
+    data, $\data{\vec{y}}_{1:\Time}$\\
+ASIF and ASIF-IR:    particles per island,  $\Np$\\
+ASIF-IR: number of intermediate timesteps, $\Ninter$ \\
+ASIF-IR: measurement variance parameterizations, ${\VtoTheta}_{\unit\comma\time}$ and ${\thetaToV}_{\unit\comma\time}$\\
+ASIF-IR: approximate process and observation mean functions, $\vec{\mu}$ and $h_{\unit\comma\time}$\\
+\inputSpace {\bf output:}\\
+  Log likelihood estimate, $\MC{\loglik}= \sum_{\time=1}^\Time\sum_{\unit=1}^\Unit \MC{\loglik}_{\unit\comma\time}$\\
+\inputSpace {\bf implicit loops:}\\
+$\; \unit \mbox{ in } \seq{1}{\Unit}$, 
+$\; \time \mbox{ in } \seq{1}{\Time}$, 
+$\; \island \mbox{ in } \seq{1}{\Island}$, 
+$\; \np \mbox{ in } \seq{1}{\Np}$
+%$\; \npgir \mbox{ in } \seq{1}{\Npgir}$
+\lastLineSpace \\
+\hline
+\end{tabular}
+\end{frame}
+
+
+\begin{frame}
+\renewcommand{\arraystretch}{1.8}.
+\noindent\begin{tabular}{l}
+\hline
+\inputSpace {\bf {\TIF}. Basic island filter.}\\
+\hline
+%\inputSpace {\bf input:} From Table~1, with $\Np=1$ \\
+%\hline
+\firstLineSpace 
+Simulate $\vec{X}^{\tif}_{0:\Time,\island}\sim f_{\vec{X}_{0:\Time}}(\vec{x}_{0:\Time})$\\ 
+Measurement weights,
+$w^M_{\unit,\time,\island}=f_{Y_{\unit,\time}|X_{\unit,\time}}(\data{y}_{\unit,\time}\given X^{\tif}_{\unit,\time,\island})$
+\\
+Prediction weights, 
+$w^P_{\unit,\time,\island}=\prod_{(\tilde \unit,\tilde n)\in B_{\unit,\time}}
+w^M_{\tilde\unit,\tilde n,\island}$\\
+$\MC{\loglik}_{\unit,\time}= 
+\log\left(
+  \sum_{\island=1}^\Island w^M_{\unit,\time,\island}w^P_{\unit,\time,\island}
+\right)
+-\log\left(
+  \sum_{\island=1}^\Island w^P_{\unit,\time,\island}
+\right)
+$
+\rule[-5mm]{0mm}{8mm}
+\\
+\hline
+\end{tabular}
+
+\end{frame}
+
+
+\begin{frame}
+
+  \frametitle{The basic island filter is not as naive as it may first appear}
+
+  \begin{myitemize}
+
+  \item BIF seems naive. Particle filter (PF) method are well known to scale better with $\Time$ than unconditional simulations.
+
+    \vspace{5mm}
+    
+  \item BIF scales well with $\Unit$ for weakly coupled systems.
+
+    \vspace{5mm}
+
+  \item With modern computers, large numbers of simulations are feasible even when $\Unit$ and $\Time$ are not small.
+
+      \vspace{5mm}
+
+    \item Initially we studied BIF as a theoretical toy. Then we found it is competitive in practice on some models of interest.
+  \end{myitemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Adapted simulation: An easier problem than filtering}
+
+  \begin{myitemize}
+  \item
+    We aim to make each island track the data in a weak sense that does not involve a solution to the full filtering problem.
+
+\vspace{3mm}
+
+  \item
+    The adapted simulation problem is to draw from
+$f_{\vec{X}_{\time}|\vec{Y}_{\time},\vec{X}_{\time-1}}
+  \big(
+    \vec{x}_{\time}\given \vec{\data{y}}_{\time},\vec{x}_{\time-1}
+  \big)$.
+
+\vspace{3mm}
+
+  \item The adapted simulation island filter (ASIF) algorithm uses importance sampling to carry out adapted simulation on each island.
+
+
+\vspace{3mm}
+
+    \item ASIF calculates the likelihood using the proper weight restricted to a neighborhood.
+\end{myitemize}
+    
+\end{frame}
+
+
+
+\begin{frame}
+
+%\setlength\extrarowheight{5pt}
+\renewcommand{\arraystretch}{1.2}.
+\noindent\begin{tabular}{l}
+\hline
+{\bf 
+{ASIF}. Adapted simulation island filter.}\inputSpace\\
+\hline
+%{\bf input:} From Table~1 \inputSpace \\
+%\hline
+\firstLineSpace
+Initialize adapted simulation: $\vec{X}^{\IF}_{0,\island} \sim f_{\vec{X}_0}(\vec{x}_0)$
+\\
+For $\time\ \mathrm{in}\ \seq{1}{\Time}$
+\\
+\asp  Proposals:
+    $\vec{X}_{\time,\island,\np}^{\IP} \sim 
+    f_{\vec{X}_{\time}|\vec{X}_{\time-1}} 
+    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\island}\big)$
+\\
+\asp Measurement weights:
+  $w^M_{\unit,\time,\island,\np} = 
+    f_{Y_{\unit,\time}|X_{\unit\comma\time}} 
+    \big (\data{y}_{\unit\comma\time}\given X^{\IP}_{\unit\comma\time,\island,\np}\big)$
+\\
+\asp  Adapted resampling weights:
+  $w^{\IF}_{\time,\island,\np} = 
+    \prod_{\unit=1}^{\Unit} w^M_{\unit,\time,\island,\np}$
+\\
+\asp
+      Resampling:
+        $\prob\big[\resampleIndex({\island})=a \big] = w^{\IF}_{\time,\island,a}
+  \Big( 
+  \sum_{\altNp=1}^{\Np} w^{\IF}_{\time,\island,\altNp}
+  \Big)^{-1}$
+\\
+\asp 
+$\vec{X}^{\IF}_{\time,\island} = \vec{X}^{\IP}_{\time,\island,r(\island)}$ 
+\\
+\asp % Prediction weights:
+  $w^{\LCP}_{\unit,\time,\island,\np}= \displaystyle
+  \prod_{\altTime=1}^{\time-1}
+  \Big[
+    \frac{1}{\Np}\sum_{k=1}^{\Np}
+    \hspace{1mm}
+       \prod_{(\altUnit,\altTime)\in B^{[\altTime]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\altTime,\island,k}
+  \Big] \prod_{(\altUnit,\time)\in B^{[\time]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\time,\island,\np}$
+\\
+End for
+\\
+$\displaystyle \MC{\loglik}_{\unit,\time}= 
+\log\Bigg(
+\frac{
+\sum_{\island=1}^\Island \sum_{\np=1}^{\Np} w^M_{\unit,\time,\island,\np}w^P_{\unit,\time,\island,\np}
+}{
+\sum_{\island=1}^\Island \sum_{\np=1}^{\Np} w^P_{\unit,\time,\island,\np}
+}
+\Bigg)
+$
+\rule[-8mm]{0mm}{10mm}
+\\
+\hline
+\end{tabular}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Intermediate resampling}
+
+
+
+\begin{myitemize}
+\item \myemph{Intermediate resampling} splits the time interval between observations into $\Ninter$ subintervals.
+
+\vspace{2mm}
+
+\item Reweighting and/or sampling at each subinterval uses a revised estimate of the anticipated measurement density at the end of the interval called a \myemph{guide function}.
+
+\vspace{2mm}
+
+\item This is applicable to continuous time models.
+
+\vspace{2mm}
+
+\item Intermediate resampling has useful theoretical and empirical properties \citep{delmoral15,park19}.
+
+\vspace{2mm}
+
+\item Intermediate resampling for adapted simulation within ASIF gives the ASIF-IR algorithm.
+
+\vspace{2mm}
+
+\item Intermediate resampling within PF gives the guided intermediate resampling filter (GIRF) of \citet{park19}, a generalization of the auxiliary particle filter of \citet{pitt99}.
+  
+\end{myitemize}
+
+\end{frame}
+
+\begin{frame}
+
+  \resizebox{!}{45mm}{
+\noindent\begin{tabular}{l}
+\hline
+{\bf {\AIRSIF}. ASIF  with  intermediate resampling.} 
+\vspace{0.4mm} \\
+\hline
+\firstLineSpace
+Initialize adapted simulation: $\vec{X}^{\IF}_{0,\island} \sim f_{\vec{X}_0}(\vec{x}_0)$
+\\
+For $\time\ \mathrm{in}\ \seq{1}{\Time}$
+\\
+\asp Guide simulations:
+    $\vec{X}_{\time,\island,\npgir}^{G} \sim 
+    f_{\vec{X}_{\time}|\vec{X}_{\time-1}} 
+    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\island} \big)$
+\\
+\asp Guide variance: $V_{\unit,\time,\island}=
+      \var \big\{
+        h_{\unit\comma\time}\big( {X}_{\unit,\time,\island,\npgir}^{G}\big), \npgir \mbox{ in } \seq{1}{\Npgir}
+      \big\}$ 
+\\
+\asp $\guideFunc^{\resample}_{\time,0,\island,\np}=1 \; \; $ and
+$\; \vec{X}_{\time,0,\island,\np}^{\GR}=\vec{X}^{\IF}_{\time-1,\island}$
+\\
+\asp For $\ninter  \,\, \mathrm{in} \,\, \seq{1}{\Ninter}$
+\\
+\asp\asp Intermediate proposals:
+        ${\vec{X}}_{\time,\ninter,\island,\np}^{\GP}
+          \sim {f}_{{\vec{X}}_{\time,\ninter}|{\vec{X}}_{\time,\ninter-1}}
+          \big(\mydot|{\vec{X}}_{\time,\ninter-1,\island,\np}^{\GR}\big)$ 
+\\
+\asp\asp 
+        $\vec{\mu}^{\GP}_{\time,\ninter,\island,\np} 
+           = \vec{\mu}\big( \vec{X}^{\GP}_{\time,\ninter,\island,\np},t_{\time,\ninter},t_{\time} \big)$
+\\
+\asp\asp      %Measurement variance at skeleton: 
+        $V^{\mathrm{meas}}_{\unit,\time,\ninter,\island,\np}
+           = \thetaToV_{\unit}(\theta,\mu^{\GP}_{\unit,\time,\ninter,\island,\np})$
+%\\
+           %\asp\asp  %Process variance:
+           , \hspace{4mm}
+        $V^{\mathrm{proc}}_{\unit,\time,\ninter,\island}
+          = V_{\unit,\time,\island} \,
+          \big(t_{\time}-t_{\time,\ninter}\big) \Big/
+          \big(t_{\time}-t_{\time,0}\big)$ 
+\\
+\asp\asp
+%      Moment matching:
+        $\theta_{\unit,\time,\ninter,\island,\np}= 
+          \VtoTheta_{\unit}\big(
+            V^{\mathrm{meas}}_{\unit,\time,\ninter,\island,\np} + V^{\mathrm{proc}}_{\unit,\time,\ninter,\island}, 
+            \, \mu^{\GP}_{\unit,\time,\ninter,\island,\np}
+          \big)$
+\\
+\asp\asp  % Guide function: 
+        $
+\guideFunc_{\time,\ninter,\island,\np}=
+          \prod_{\unit=1}^{\Unit}
+          f_{Y_{\unit,\time}|X_{\unit,\time}}
+          \big(
+            \data{y}_{\unit,\time}\given \mu^{\GP}_{\unit,\time,\ninter,\island,\np} \giventh \theta_{\unit,\time,\ninter,\island,\np} 
+          \big)$
+\\
+\asp\asp Guide weights:
+$w^G_{\time,\ninter,\island,\np}= \guideFunc^{}_{\time,\ninter,\island,\np}
+         \big/ \guideFunc^{\resample}_{\time,\ninter-1,\island,\np}$
+\\
+\asp\asp
+      Resampling:
+        $\prob\big[\resampleIndex({\island,\np})=a \big] = w^G_{\time,\ninter,\island,a}
+\Big( \sum_{\altNp=1}^{\Np}w^G_{\time,\ninter,\island,\altNp}\Big)^{-1}$
+\\
+\asp\asp
+        $\vec{X}_{\time,\ninter,\island,\np}^{\GR}=\vec{X}_{\time,\ninter,\island,\resampleIndex({\island,\np})}^{\GP}\; \; $ and
+        $\; \guideFunc^{\resample}_{\time,\ninter,\island,\np}= \guideFunc^{}_{\time,\ninter,\island,\resampleIndex({\island,\np})}\,$
+\\
+\asp
+End For
+\\
+\asp
+  Set $\vec{X}^{\IF}_{\time,\island}=\vec{X}^{\GR}_{\time,\Ninter,\island,1}$ 
+\\ 
+\asp Measurement weights:
+  $w^M_{\unit,\time,\island,\npgir} = 
+    f_{Y_{\unit,\time}|X_{\unit,\time}} 
+    \big (\data{y}_{\unit,\time}\given X^{G}_{\unit,\time,\island,\npgir} \big)$
+\\
+\asp % Prediction weights:
+  $w^{\LCP}_{\unit,\time,\island,\npgir}= \displaystyle
+  \prod_{\altTime=1}^{\time-1}
+  \Big[
+    \frac{1}{\Npgir}\sum_{a=1}^{\Npgir}
+    \hspace{1mm}
+       \prod_{(\altUnit,\altTime)\in B^{[\altTime]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\altTime,\island,a}
+  \Big] \prod_{(\altUnit,\time)\in B^{[\time]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\time,\island,\npgir}$
+\\
+End for
+\\
+$\displaystyle \MC{\loglik}_{\unit,\time}= 
+\log\Bigg(
+\frac{
+\sum_{\island=1}^\Island \sum_{\npgir=1}^{\Npgir} w^M_{\unit,\time,\island,\npgir}w^P_{\unit,\time,\island,\npgir}
+}{
+\sum_{\island=1}^\Island \sum_{\npgir=1}^{\Npgir} w^P_{\unit,\time,\island,\npgir}
+}
+\Bigg)
+$
+\vspace{1mm}
+\\
+\hline
+\end{tabular}
+}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Software for SpatPOMP models}
+
+  \begin{myitemize}
+  \item We use the \code{asif}, \code{asifir} and \code{girf} implementations in the  R package \code{spatPomp} \citep{asfaw20github}.
+
+\vspace{5mm}
+
+  \item \code{spatPomp} offers a class `\code{spatPomp}' that extends the `\code{pomp}' class for POMP models in the R package \code{pomp} \citep{king16}.
+%    \item All these algorithms are plug-and-play, 
+
+
+\vspace{5mm}
+
+  \item All methods available in \code{pomp} can formally be applied to `\code{spatPomp}' objects, though they may not be practically effective for spatiotemporal POMPs.
+    \end{myitemize}
+    
+\end{frame}
+
+\begin{frame}
+\frametitle{Filtering $U$-dimensional correlated Brownian motion}
+
+\vspace{-3mm}
+
+\begin{center}
+\includegraphics[width=10cm]{bm_alt_plot-1.pdf}
+
+\vspace{-1mm}
+
+$\cov\big(X_{\unit,\time}-X_{\unit,\time-1},X_{\altUnit,\time}-X_{\altUnit,\time-1}\big) \sim 0.4^{|\unit-\altUnit|}_{}$
+
+\end{center}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Filtering $U$ units of a coupled measles SEIR model}
+
+\vspace{-3mm}
+
+\begin{center}
+\includegraphics[width=10cm]{mscale_loglik_plot-1.pdf}
+
+
+\end{center}
+
+\vspace{-2mm}
+
+Simulated data using a gravity model with geography, demography and transmssion parameters corresponding to UK pre-vaccination measles.
+
+%\end{center}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Filtering $U$ units of Lorenz 96 toy atmospheric model} 
+
+\vspace{-3mm}
+
+\begin{center}
+\includegraphics[width=10cm]{lz4_loglik_plot-1.pdf}
+
+\vspace{-1mm}
+
+$dX_{\unit}(t) = \big \{  X_{\unit-1}(t) \big(X_{\unit+1}(t) - X_{\unit-2}(t)\big) - X_{\unit}(t) + F \big\} dt + \sigma \, dB_{\unit}(t)$
+
+\end{center}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{From filtering to parameter inference}
+
+\begin{myitemize}
+\item Log likelihood evaluation in principle enables likelihood-based or Bayesian inference.
+
+\vspace{3mm}
+
+\item Iterated filtering maximizes the likelihood for PF or GIRF \citep{ionides15}.
+
+\vspace{3mm}
+
+\item Particle Markov chain Monte Carlo can be applied with any likelihood estimate \citep{andrieu10}. It is numerically intractable when Monte Carlo estimates are costly and noisy.
+
+\vspace{3mm}
+
+\item Extending iterated filtering to island filters is future work.
+
+\end{myitemize}
+
+\end{frame}
+
+\begin{frame}
+
+\frametitle{Measles likelihood slices for $G$ and $\mu_{IR}$ via ASIF}
+
+\vspace{-3mm}
+
+%\hspace{-5mm}
+\includegraphics[width=5.5cm]{slice_plot-1.pdf}
+\includegraphics[width=5.5cm]{gamma_slice_plot-1.pdf}
+
+\begin{myitemize}
+\item 
+Simulating $15$ year of data from $U=40$ cities for the measles model.
+\item
+The gravitational coupling constant $G$ is fairly weakly identified: a week of computing on a 30 core machine gives Monte Carlo error on the same scale as the statistical uncertainty.
+\item
+The recovery rate $\mu_{IR}$ is well identified.
+\end{myitemize}
+\vspace{-2mm}
+
+\end{frame}
+
+\begin{frame}
+\begin{theorem}  \label{thm:tif}
+Let $\MC{\loglik}$ denote the Monte Carlo likelihood approximation constructed by BIF, ASIF or ASIF-IR.
+Consider a limit with a growing number of islands, $\Island\to\infty$.
+Suppose regularity assumptions listed in the arXiv preprint.
+There are quantities $\el(\Unit,\Time) = O(1)$ and $V(\Unit,\Time)=O(\Unit^2\Time^2)$ such that
+\begin{equation}
+%\label{th1:lik:bound}
+\nonumber
+\Island^{1/2}\big[ \MC{\loglik}-\loglik-\el\Unit\Time \big]  \xrightarrow[\Island \rightarrow \infty]{d} \normal\big[0,V\big],
+\end{equation}
+where $\xrightarrow[\Island \rightarrow \infty]{d}$ denotes convergence in distribution and $\normal[\mu,\Sigma]$ is the normal distribution with mean $\mu$ and variance $\Sigma$.
+If an additional spatiotemporal mixing assumption holds, we obtain an improved variance bound
+\begin{equation}
+%\label{th1:lik:bound2}
+\nonumber
+%V < \ThmOneVarBound.
+V(\Unit,\Time) = O(\Unit\Time)
+\end{equation}
+\end{theorem}
+\end{frame}
+
+
+
+
+\begin{frame}[allowframebreaks]
+\frametitle{References}
+\bibliographystyle{apalike}
+\bibliography{bib-cirm}
+\end{frame}
+
+\end{document}
