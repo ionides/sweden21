@@ -10,10 +10,9 @@
 
 \begin{frame}
 \begin{center}
-  {\Large\bf Island filters for inference on metapopulation dynamics, with epidemiological applications}
-
-%% Infectious disease transmission is a nonlinear partially observed stochastic dynamic system with topical interest. For low-dimensional systems, models can be fitted to time series data using Monte Carlo particle filter methods. As dimension increases, for example when analyzing epidemics among a collection of spatially coupled populations, particle filter methods rapidly degenerate. We show that many independent Monte Carlo calculations, each of which does not attempt to solve the filtering problem, can be combined to give a global filtering solution with favorable theoretical scaling properties under a weak coupling condition. The independent Monte Carlo calculations are called islands, and the operation carried out on each island is called adapted simulation, so the complete algorithm is called an adapted simulation island filter. We demonstrate this methodology and some related algorithms on a model for measles transmission within and between cities. The COVID-19 situation will also be discussed.
-
+  {\Large\bf Bagging and blocking: Inference via particle filters for interacting dynamic systems}
+  
+%% Infectious disease transmission is a nonlinear partially observed stochastic dynamic system with topical interest. For low-dimensional systems, models can be fitted to time series data using Monte Carlo particle filter methods. As dimension increases, for example when analyzing epidemics among multiple spatially coupled populations, basic particle filter methods rapidly degenerate. A collection of independent Monte Carlo calculations can be combined to give a global filtering solution with favorable theoretical scaling properties. The independent Monte Carlo calculations are called bootstrap replicates, and their aggregation is called a bagged filter. Bagged filtering is effective at likelihood evaluation for a model of measles transmission within and between cities. A blocked particle filter also works well at this task. Bagged and blocked particle filters can both be coerced into carrying out likelihood maximization by iterative application to an extension of the model that has stochastically perturbed parameters. Numerical results are carried out using the R package spatPomp.
 
 \vspace{2mm}
 
@@ -22,16 +21,18 @@ University of Michigan, Department of Statistics
 
 \vspace{8mm}
 
-Department seminar
+Statistics seminar series at \\
+Chalmers University of Technology /
+University of Gothenburg
 \\
-Friday March 20, 2020
+Tuesday November 23, 2021
 
-%% 16:40 -> 17:10
+%% 8:15am EST
 
 \vspace{8mm}
 
-Based on \url{https://arxiv.org/abs/2002.05211}\\
-In collaboration with Kidus Asfaw, Joonha Park and Aaron King\\
+Collaborators:\\
+Kidus Asfaw, Ning Ning, Joonha Park and Aaron King\\
 
 \end{center}
 
@@ -47,19 +48,19 @@ In collaboration with Kidus Asfaw, Joonha Park and Aaron King\\
 
   \vspace{10mm}
   
-  \myemph{Independent island filters}. We study three algorithms that combine many non-interacting Monte Carlo processes.
+  \myemph{Bagged filters}. We study three algorithms that combine many non-interacting Monte Carlo processes.
 
   \vspace{3mm}
   
   \begin{myitemize}
-  \item Basic island filter (BIF)
-  \item Adapted simulation island filter (ASIF)
-    \item Adapted simulation island filter with intermediate resampling (ASIF-IR)
+  \item Unadapted bagged filter (UBF)
+  \item adapted bagged filter (ABF)
+    \item adapted bagged filter with intermediate resampling (ABF-IR)
   \end{myitemize}
 
   \vspace{10mm}
 
-  \myemph{Metapopulation dynamics}. Island filters have theoretical and empirical scaling properties suited to collections of weakly coupled populations.
+  \myemph{Metapopulation dynamics}. Bagged filters have theoretical and empirical scaling properties suited to collections of weakly coupled populations.
 
 \end{frame}
 \begin{frame}
@@ -131,25 +132,25 @@ Simulated data using a gravity model with geography, demography and transmission
   
 \noindent\begin{tabular}{l}
 \hline
-\inputSpace {\bf Island filter inputs, outputs and implicit loops.}\\
+\inputSpace {\bf Bagged filter inputs, outputs and implicit loops.}\\
 \hline
 \inputSpace {\bf input:}
 \\
 simulator for $f_{\vec{X}_0}(\vec{x}_0)$ and $f_{\vec{X}_{\time}|\vec{X}_{\time-1}}(\vec{x}_{\time}\given \vec{x}_{\time-1})$\\
     evaluator for $f_{{Y}_{\unit\comma\time}|{X}_{\unit\comma\time}}({y}_{\unit\comma\time}\given {x}_{\unit\comma\time})$\\
-    number of islands, $\Island$\\
+    number of islands, $\Rep$\\
     neighborhood structure, $B_{\unit\comma\time}$\\
     data, $\data{\vec{y}}_{1:\Time}$\\
-ASIF and ASIF-IR:    particles per island,  $\Np$\\
-ASIF-IR: number of intermediate timesteps, $\Ninter$ \\
-ASIF-IR: measurement variance parameterizations, ${\VtoTheta}_{\unit\comma\time}$ and ${\thetaToV}_{\unit\comma\time}$\\
-ASIF-IR: approximate process and observation mean functions, $\vec{\mu}$ and $h_{\unit\comma\time}$\\
+ABF and ABF-IR:    particles per island,  $\Np$\\
+ABF-IR: number of intermediate timesteps, $\Ninter$ \\
+ABF-IR: measurement variance parameterizations, ${\VtoTheta}_{\unit\comma\time}$ and ${\thetaToV}_{\unit\comma\time}$\\
+ABF-IR: approximate process and observation mean functions, $\vec{\mu}$ and $h_{\unit\comma\time}$\\
 \inputSpace {\bf output:}\\
   Log likelihood estimate, $\MC{\loglik}= \sum_{\time=1}^\Time\sum_{\unit=1}^\Unit \MC{\loglik}_{\unit\comma\time}$\\
 \inputSpace {\bf implicit loops:}\\
 $\; \unit \mbox{ in } \seq{1}{\Unit}$, 
 $\; \time \mbox{ in } \seq{1}{\Time}$, 
-$\; \island \mbox{ in } \seq{1}{\Island}$, 
+$\; \rep \mbox{ in } \seq{1}{\Rep}$, 
 $\; \np \mbox{ in } \seq{1}{\Np}$
 %$\; \npgir \mbox{ in } \seq{1}{\Npgir}$
 \lastLineSpace \\
@@ -162,24 +163,24 @@ $\; \np \mbox{ in } \seq{1}{\Np}$
 \renewcommand{\arraystretch}{1.8}.
 \noindent\begin{tabular}{l}
 \hline
-\inputSpace {\bf {\TIF}. Basic island filter.}\\
+\inputSpace {\bf {\TIF}. Unadapted bagged filter.}\\
 \hline
 %\inputSpace {\bf input:} From Table~1, with $\Np=1$ \\
 %\hline
 \firstLineSpace 
-Simulate $\vec{X}^{\tif}_{0:\Time,\island}\sim f_{\vec{X}_{0:\Time}}(\vec{x}_{0:\Time})$\\ 
+Simulate $\vec{X}^{\tif}_{0:\Time,\rep}\sim f_{\vec{X}_{0:\Time}}(\vec{x}_{0:\Time})$\\ 
 Measurement weights,
-$w^M_{\unit,\time,\island}=f_{Y_{\unit,\time}|X_{\unit,\time}}(\data{y}_{\unit,\time}\given X^{\tif}_{\unit,\time,\island})$
+$w^M_{\unit,\time,\rep}=f_{Y_{\unit,\time}|X_{\unit,\time}}(\data{y}_{\unit,\time}\given X^{\tif}_{\unit,\time,\rep})$
 \\
 Prediction weights, 
-$w^P_{\unit,\time,\island}=\prod_{(\tilde \unit,\tilde n)\in B_{\unit,\time}}
-w^M_{\tilde\unit,\tilde n,\island}$\\
+$w^P_{\unit,\time,\rep}=\prod_{(\tilde \unit,\tilde n)\in B_{\unit,\time}}
+w^M_{\tilde\unit,\tilde n,\rep}$\\
 $\MC{\loglik}_{\unit,\time}= 
 \log\left(
-  \sum_{\island=1}^\Island w^M_{\unit,\time,\island}w^P_{\unit,\time,\island}
+  \sum_{\rep=1}^\Rep w^M_{\unit,\time,\rep}w^P_{\unit,\time,\rep}
 \right)
 -\log\left(
-  \sum_{\island=1}^\Island w^P_{\unit,\time,\island}
+  \sum_{\rep=1}^\Rep w^P_{\unit,\time,\rep}
 \right)
 $
 \rule[-5mm]{0mm}{8mm}
@@ -196,11 +197,11 @@ $
 
   \begin{myitemize}
 
-  \item BIF seems naive. Particle filter (PF) method are well known to scale better with $\Time$ than unconditional simulations.
+  \item UBF seems naive. Particle filter (PF) method are well known to scale better with $\Time$ than unconditional simulations.
 
     \vspace{5mm}
     
-  \item BIF scales well with $\Unit$ for weakly coupled systems.
+  \item UBF scales well with $\Unit$ for weakly coupled systems.
 
     \vspace{5mm}
 
@@ -208,7 +209,7 @@ $
 
       \vspace{5mm}
 
-    \item Initially we studied BIF as a theoretical toy. Then we found it is competitive in practice on some models of interest.
+    \item Initially we studied UBF as a theoretical toy. Then we found it is competitive in practice on some models of interest.
   \end{myitemize}
 
 \end{frame}
@@ -231,12 +232,12 @@ $f_{\vec{X}_{\time}|\vec{Y}_{\time},\vec{X}_{\time-1}}
 
 \vspace{3mm}
 
-  \item The adapted simulation island filter (ASIF) algorithm uses importance sampling to carry out adapted simulation on each island.
+  \item The adapted bagged filter (ABF) algorithm uses importance sampling to carry out adapted simulation on each island.
 
 
 \vspace{3mm}
 
-    \item ASIF calculates the likelihood using the proper weight restricted to a neighborhood.
+    \item ABF calculates the likelihood using the proper weight restricted to a neighborhood.
 \end{myitemize}
     
 \end{frame}
@@ -250,60 +251,60 @@ $f_{\vec{X}_{\time}|\vec{Y}_{\time},\vec{X}_{\time-1}}
 \noindent\begin{tabular}{l}
 \hline
 {\bf 
-{ASIF}. Adapted simulation island filter.}\inputSpace\\
+{ABF}. Adapted bagged filter.}\inputSpace\\
 \hline
 %{\bf input:} From Table~1 \inputSpace \\
 %\hline
 \firstLineSpace
-Initialize adapted simulation: $\vec{X}^{\IF}_{0,\island} \sim f_{\vec{X}_0}(\vec{x}_0)$
+Initialize adapted simulation: $\vec{X}^{\IF}_{0,\rep} \sim f_{\vec{X}_0}(\vec{x}_0)$
 \\
 For $\time\ \mathrm{in}\ \seq{1}{\Time}$
 \\
 \asp  Proposals:
-    $\vec{X}_{\time,\island,\np}^{\IP} \sim 
+    $\vec{X}_{\time,\rep,\np}^{\IP} \sim 
     f_{\vec{X}_{\time}|\vec{X}_{\time-1}} 
-    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\island}\big)$
+    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\rep}\big)$
 \\
 \asp Measurement weights:
-  $w^M_{\unit,\time,\island,\np} = 
+  $w^M_{\unit,\time,\rep,\np} = 
     f_{Y_{\unit,\time}|X_{\unit\comma\time}} 
-    \big (\data{y}_{\unit\comma\time}\given X^{\IP}_{\unit\comma\time,\island,\np}\big)$
+    \big (\data{y}_{\unit\comma\time}\given X^{\IP}_{\unit\comma\time,\rep,\np}\big)$
 \\
 \asp  Adapted resampling weights:
-  $w^{\IF}_{\time,\island,\np} = 
-    \prod_{\unit=1}^{\Unit} w^M_{\unit,\time,\island,\np}$
+  $w^{\IF}_{\time,\rep,\np} = 
+    \prod_{\unit=1}^{\Unit} w^M_{\unit,\time,\rep,\np}$
 \\
 \asp
       Resampling:
-        $\prob\big[\resampleIndex({\island})=a \big] = w^{\IF}_{\time,\island,a}
+        $\prob\big[\resampleIndex({\rep})=a \big] = w^{\IF}_{\time,\rep,a}
   \Big( 
-  \sum_{\altNp=1}^{\Np} w^{\IF}_{\time,\island,\altNp}
+  \sum_{\altNp=1}^{\Np} w^{\IF}_{\time,\rep,\altNp}
   \Big)^{-1}$
 \\
 \asp 
-$\vec{X}^{\IF}_{\time,\island} = \vec{X}^{\IP}_{\time,\island,r(\island)}$ 
+$\vec{X}^{\IF}_{\time,\rep} = \vec{X}^{\IP}_{\time,\rep,r(\rep)}$ 
 \\
 \asp % Prediction weights:
-  $w^{\LCP}_{\unit,\time,\island,\np}= \displaystyle
+  $w^{\LCP}_{\unit,\time,\rep,\np}= \displaystyle
   \prod_{\altTime=1}^{\time-1}
   \Big[
     \frac{1}{\Np}\sum_{k=1}^{\Np}
     \hspace{1mm}
        \prod_{(\altUnit,\altTime)\in B^{[\altTime]}_{\unit,\time}} 
     \hspace{-1mm}
-        w^M_{\altUnit,\altTime,\island,k}
+        w^M_{\altUnit,\altTime,\rep,k}
   \Big] \prod_{(\altUnit,\time)\in B^{[\time]}_{\unit,\time}} 
     \hspace{-1mm}
-        w^M_{\altUnit,\time,\island,\np}$
+        w^M_{\altUnit,\time,\rep,\np}$
 \\
 End for
 \\
 $\displaystyle \MC{\loglik}_{\unit,\time}= 
 \log\Bigg(
 \frac{
-\sum_{\island=1}^\Island \sum_{\np=1}^{\Np} w^M_{\unit,\time,\island,\np}w^P_{\unit,\time,\island,\np}
+\sum_{\rep=1}^\Rep \sum_{\np=1}^{\Np} w^M_{\unit,\time,\rep,\np}w^P_{\unit,\time,\rep,\np}
 }{
-\sum_{\island=1}^\Island \sum_{\np=1}^{\Np} w^P_{\unit,\time,\island,\np}
+\sum_{\rep=1}^\Rep \sum_{\np=1}^{\Np} w^P_{\unit,\time,\rep,\np}
 }
 \Bigg)
 $
@@ -336,7 +337,7 @@ $
 
 \vspace{2mm}
 
-\item Intermediate resampling for adapted simulation within ASIF gives the ASIF-IR algorithm.
+\item Intermediate resampling for adapted simulation within ABF gives the ABF-IR algorithm.
 
 \vspace{2mm}
 
@@ -351,111 +352,111 @@ $
   \resizebox{!}{45mm}{
 \noindent\begin{tabular}{l}
 \hline
-{\bf {\AIRSIF}. ASIF  with  intermediate resampling.} 
+{\bf {ABF-IR}. ABF  with  intermediate resampling.} 
 \vspace{0.4mm} \\
 \hline
 \firstLineSpace
-Initialize adapted simulation: $\vec{X}^{\IF}_{0,\island} \sim f_{\vec{X}_0}(\vec{x}_0)$
+Initialize adapted simulation: $\vec{X}^{\IF}_{0,\rep} \sim f_{\vec{X}_0}(\vec{x}_0)$
 \\
 For $\time\ \mathrm{in}\ \seq{1}{\Time}$
 \\
 \asp Guide simulations:
-    $\vec{X}_{\time,\island,\npgir}^{G} \sim 
+    $\vec{X}_{\time,\rep,\npgir}^{G} \sim 
     f_{\vec{X}_{\time}|\vec{X}_{\time-1}} 
-    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\island} \big)$
+    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\rep} \big)$
 \\
-\asp Guide variance: $V_{\unit,\time,\island}=
+\asp Guide variance: $V_{\unit,\time,\rep}=
       \var \big\{
-        h_{\unit\comma\time}\big( {X}_{\unit,\time,\island,\npgir}^{G}\big), \npgir \mbox{ in } \seq{1}{\Npgir}
+        h_{\unit\comma\time}\big( {X}_{\unit,\time,\rep,\npgir}^{G}\big), \npgir \mbox{ in } \seq{1}{\Npgir}
       \big\}$ 
 \\
-\asp $\guideFunc^{\resample}_{\time,0,\island,\np}=1 \; \; $ and
-$\; \vec{X}_{\time,0,\island,\np}^{\GR}=\vec{X}^{\IF}_{\time-1,\island}$
+\asp $\guideFunc^{\resample}_{\time,0,\rep,\np}=1 \; \; $ and
+$\; \vec{X}_{\time,0,\rep,\np}^{\GR}=\vec{X}^{\IF}_{\time-1,\rep}$
 \\
 \asp For $\ninter  \,\, \mathrm{in} \,\, \seq{1}{\Ninter}$
 \\
 \asp\asp Intermediate proposals:
-        ${\vec{X}}_{\time,\ninter,\island,\np}^{\GP}
+        ${\vec{X}}_{\time,\ninter,\rep,\np}^{\GP}
           \sim {f}_{{\vec{X}}_{\time,\ninter}|{\vec{X}}_{\time,\ninter-1}}
-          \big(\mydot|{\vec{X}}_{\time,\ninter-1,\island,\np}^{\GR}\big)$ 
+          \big(\mydot|{\vec{X}}_{\time,\ninter-1,\rep,\np}^{\GR}\big)$ 
 \\
 \asp\asp 
-        $\vec{\mu}^{\GP}_{\time,\ninter,\island,\np} 
-           = \vec{\mu}\big( \vec{X}^{\GP}_{\time,\ninter,\island,\np},t_{\time,\ninter},t_{\time} \big)$
+        $\vec{\mu}^{\GP}_{\time,\ninter,\rep,\np} 
+           = \vec{\mu}\big( \vec{X}^{\GP}_{\time,\ninter,\rep,\np},t_{\time,\ninter},t_{\time} \big)$
 \\
 \asp\asp      %Measurement variance at skeleton: 
-        $V^{\mathrm{meas}}_{\unit,\time,\ninter,\island,\np}
-           = \thetaToV_{\unit}(\theta,\mu^{\GP}_{\unit,\time,\ninter,\island,\np})$
+        $V^{\mathrm{meas}}_{\unit,\time,\ninter,\rep,\np}
+           = \thetaToV_{\unit}(\theta,\mu^{\GP}_{\unit,\time,\ninter,\rep,\np})$
 %\\
            %\asp\asp  %Process variance:
            , \hspace{4mm}
-        $V^{\mathrm{proc}}_{\unit,\time,\ninter,\island}
-          = V_{\unit,\time,\island} \,
+        $V^{\mathrm{proc}}_{\unit,\time,\ninter,\rep}
+          = V_{\unit,\time,\rep} \,
           \big(t_{\time}-t_{\time,\ninter}\big) \Big/
           \big(t_{\time}-t_{\time,0}\big)$ 
 \\
 \asp\asp
 %      Moment matching:
-        $\theta_{\unit,\time,\ninter,\island,\np}= 
+        $\theta_{\unit,\time,\ninter,\rep,\np}= 
           \VtoTheta_{\unit}\big(
-            V^{\mathrm{meas}}_{\unit,\time,\ninter,\island,\np} + V^{\mathrm{proc}}_{\unit,\time,\ninter,\island}, 
-            \, \mu^{\GP}_{\unit,\time,\ninter,\island,\np}
+            V^{\mathrm{meas}}_{\unit,\time,\ninter,\rep,\np} + V^{\mathrm{proc}}_{\unit,\time,\ninter,\rep}, 
+            \, \mu^{\GP}_{\unit,\time,\ninter,\rep,\np}
           \big)$
 \\
 \asp\asp  % Guide function: 
         $
-\guideFunc_{\time,\ninter,\island,\np}=
+\guideFunc_{\time,\ninter,\rep,\np}=
           \prod_{\unit=1}^{\Unit}
           f_{Y_{\unit,\time}|X_{\unit,\time}}
           \big(
-            \data{y}_{\unit,\time}\given \mu^{\GP}_{\unit,\time,\ninter,\island,\np} \giventh \theta_{\unit,\time,\ninter,\island,\np} 
+            \data{y}_{\unit,\time}\given \mu^{\GP}_{\unit,\time,\ninter,\rep,\np} \giventh \theta_{\unit,\time,\ninter,\rep,\np} 
           \big)$
 \\
 \asp\asp Guide weights:
-$w^G_{\time,\ninter,\island,\np}= \guideFunc^{}_{\time,\ninter,\island,\np}
-         \big/ \guideFunc^{\resample}_{\time,\ninter-1,\island,\np}$
+$w^G_{\time,\ninter,\rep,\np}= \guideFunc^{}_{\time,\ninter,\rep,\np}
+         \big/ \guideFunc^{\resample}_{\time,\ninter-1,\rep,\np}$
 \\
 \asp\asp
       Resampling:
-        $\prob\big[\resampleIndex({\island,\np})=a \big] = w^G_{\time,\ninter,\island,a}
-\Big( \sum_{\altNp=1}^{\Np}w^G_{\time,\ninter,\island,\altNp}\Big)^{-1}$
+        $\prob\big[\resampleIndex({\rep,\np})=a \big] = w^G_{\time,\ninter,\rep,a}
+\Big( \sum_{\altNp=1}^{\Np}w^G_{\time,\ninter,\rep,\altNp}\Big)^{-1}$
 \\
 \asp\asp
-        $\vec{X}_{\time,\ninter,\island,\np}^{\GR}=\vec{X}_{\time,\ninter,\island,\resampleIndex({\island,\np})}^{\GP}\; \; $ and
-        $\; \guideFunc^{\resample}_{\time,\ninter,\island,\np}= \guideFunc^{}_{\time,\ninter,\island,\resampleIndex({\island,\np})}\,$
+        $\vec{X}_{\time,\ninter,\rep,\np}^{\GR}=\vec{X}_{\time,\ninter,\rep,\resampleIndex({\rep,\np})}^{\GP}\; \; $ and
+        $\; \guideFunc^{\resample}_{\time,\ninter,\rep,\np}= \guideFunc^{}_{\time,\ninter,\rep,\resampleIndex({\rep,\np})}\,$
 \\
 \asp
 End For
 \\
 \asp
-  Set $\vec{X}^{\IF}_{\time,\island}=\vec{X}^{\GR}_{\time,\Ninter,\island,1}$ 
+  Set $\vec{X}^{\IF}_{\time,\rep}=\vec{X}^{\GR}_{\time,\Ninter,\rep,1}$ 
 \\ 
 \asp Measurement weights:
-  $w^M_{\unit,\time,\island,\npgir} = 
+  $w^M_{\unit,\time,\rep,\npgir} = 
     f_{Y_{\unit,\time}|X_{\unit,\time}} 
-    \big (\data{y}_{\unit,\time}\given X^{G}_{\unit,\time,\island,\npgir} \big)$
+    \big (\data{y}_{\unit,\time}\given X^{G}_{\unit,\time,\rep,\npgir} \big)$
 \\
 \asp % Prediction weights:
-  $w^{\LCP}_{\unit,\time,\island,\npgir}= \displaystyle
+  $w^{\LCP}_{\unit,\time,\rep,\npgir}= \displaystyle
   \prod_{\altTime=1}^{\time-1}
   \Big[
     \frac{1}{\Npgir}\sum_{a=1}^{\Npgir}
     \hspace{1mm}
        \prod_{(\altUnit,\altTime)\in B^{[\altTime]}_{\unit,\time}} 
     \hspace{-1mm}
-        w^M_{\altUnit,\altTime,\island,a}
+        w^M_{\altUnit,\altTime,\rep,a}
   \Big] \prod_{(\altUnit,\time)\in B^{[\time]}_{\unit,\time}} 
     \hspace{-1mm}
-        w^M_{\altUnit,\time,\island,\npgir}$
+        w^M_{\altUnit,\time,\rep,\npgir}$
 \\
 End for
 \\
 $\displaystyle \MC{\loglik}_{\unit,\time}= 
 \log\Bigg(
 \frac{
-\sum_{\island=1}^\Island \sum_{\npgir=1}^{\Npgir} w^M_{\unit,\time,\island,\npgir}w^P_{\unit,\time,\island,\npgir}
+\sum_{\rep=1}^\Rep \sum_{\npgir=1}^{\Npgir} w^M_{\unit,\time,\rep,\npgir}w^P_{\unit,\time,\rep,\npgir}
 }{
-\sum_{\island=1}^\Island \sum_{\npgir=1}^{\Npgir} w^P_{\unit,\time,\island,\npgir}
+\sum_{\rep=1}^\Rep \sum_{\npgir=1}^{\Npgir} w^P_{\unit,\time,\rep,\npgir}
 }
 \Bigg)
 $
@@ -561,13 +562,13 @@ $dX_{\unit}(t) = \big \{  X_{\unit-1}(t) \big(X_{\unit+1}(t) - X_{\unit-2}(t)\bi
 
 \begin{frame}
 
-\frametitle{Measles likelihood slices for $G$ and $\mu_{IR}$ via ASIF}
+\frametitle{Measles likelihood slices for $G$ and $\mu_{IR}$ via ABF}
 
 \vspace{-3mm}
 
 %\hspace{-5mm}
 \includegraphics[width=5.5cm]{slice_plot-1.pdf}
-\includegraphics[width=5.5cm]{gamma_slice_plot-1.pdf}
+\includegraphics[width=5.5cm]{gammaSlice_plot-1.pdf}
 
 \begin{myitemize}
 \item 
@@ -583,16 +584,16 @@ The recovery rate $\mu_{IR}$ is well identified.
 
 \begin{frame}
 \begin{theorem}  \label{thm:tif}
-Let $\MC{\loglik}$ denote the Monte Carlo likelihood approximation constructed by BIF, ASIF or ASIF-IR.
-Consider a limit with a growing number of islands, $\Island\to\infty$.
+Let $\MC{\loglik}$ denote the Monte Carlo likelihood approximation constructed by UBF, ABF or ABF-IR.
+Consider a limit with a growing number of islands, $\Rep\to\infty$.
 Suppose regularity assumptions listed in the arXiv preprint.
 There are quantities $\el(\Unit,\Time) = O(1)$ and $V(\Unit,\Time)=O(\Unit^2\Time^2)$ such that
 \begin{equation}
 %\label{th1:lik:bound}
 \nonumber
-\Island^{1/2}\big[ \MC{\loglik}-\loglik-\el\Unit\Time \big]  \xrightarrow[\Island \rightarrow \infty]{d} \normal\big[0,V\big],
+\Rep^{1/2}\big[ \MC{\loglik}-\loglik-\el\Unit\Time \big]  \xrightarrow[\Rep \rightarrow \infty]{d} \normal\big[0,V\big],
 \end{equation}
-where $\xrightarrow[\Island \rightarrow \infty]{d}$ denotes convergence in distribution and $\normal[\mu,\Sigma]$ is the normal distribution with mean $\mu$ and variance $\Sigma$.
+where $\xrightarrow[\Rep \rightarrow \infty]{d}$ denotes convergence in distribution and $\normal[\mu,\Sigma]$ is the normal distribution with mean $\mu$ and variance $\Sigma$.
 If an additional spatiotemporal mixing assumption holds, we obtain an improved variance bound
 \begin{equation}
 %\label{th1:lik:bound2}
@@ -609,7 +610,7 @@ V(\Unit,\Time) = O(\Unit\Time)
 \begin{frame}[allowframebreaks]
 \frametitle{References}
 \bibliographystyle{apalike}
-\bibliography{bib-cirm}
+\bibliography{bib-sweden}
 \end{frame}
 
 \end{document}
