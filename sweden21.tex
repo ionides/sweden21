@@ -119,6 +119,130 @@ The units could be a metapopulation, say cities in an epidemic model
 
 \end{frame}
 
+\begin{frame}{Particle filter (PF)}
+
+  \begin{columns}
+    \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Evolutionary analogy}}
+
+      \vspace{5mm}
+      
+      Mutation
+
+      $\downarrow$
+
+      Fitness
+
+      $\downarrow$
+
+      Natural selection
+      \end{center}
+    \end{column}
+     \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Particle filter algorithm}}
+
+      \vspace{5mm}
+      
+      Predict: stochastic dynamics
+
+      $\downarrow$
+
+      Measurement: weight
+
+      $\downarrow$
+
+      Filter: resample
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \vspace{15mm}
+  
+    \begin{myitemize}
+  \item PF is an evolutionary algorithm with good mathematical properties: an unbiased likelihood estimate and consistent latent state distribution.
+  \end{myitemize}
+
+\end{frame}
+  
+\begin{frame}{Block particle filter (BPF)}
+
+  \begin{columns}
+    \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Evolutionary analogy}}
+
+      \vspace{5mm}
+      
+      Mutation
+
+      $\downarrow$
+
+      Fitness\\
+      for each chromosome
+
+      $\downarrow$
+
+      Natural selection\\
+      for each chromosome
+
+      $\downarrow$
+
+      Recombine chromosomes
+      
+      \end{center}
+    \end{column}
+     \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Block particle filter}}
+
+      \vspace{5mm}
+      
+      Predict: stochastic dynamics
+
+      $\downarrow$
+
+      Measurement: weight\\
+      for each block
+
+      $\downarrow$
+
+      Filter: resample\\
+      for each block
+
+      $\downarrow$
+
+      Recombine blocks
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \vspace{10mm}
+  
+    \begin{myitemize}
+    \item Blocks in BPF allow recombination (reassortment of chromosomes in sexual reproduction) in the evolutionary analogy.
+\item Blocks are a partition of the spatial units. 
+  \end{myitemize}
+
+\end{frame}
+
+\begin{frame}{Anticipated limitations of BPF}
+
+\citet{rebeschini15} proved an asymptotic limit where BPF beats the curse of dimensionality but were modest in their applied hopes since blocks small enough to be practical might give unacceptable bias.
+  
+\begin{myitemize}
+\item \textcolor{blue}{q``not anticipated to be applicable to real high-dimensional
+  problems''}
+  
+\item \textcolor{blue}{``it is far from clear whether this simple algorithm is of immediate practical utility in the most complex real-world applications''}
+
+\end{myitemize}
+
+Thus we look for algorithms without this weakness which also have provable scalability.
+
+\end{frame}
+  
 \begin{frame}{Plug-and-play methods for implicit models}
   \begin{myitemize}
 \item We address stochastic dynamic models where a simulator is available, but transition densities are not readily accessible.
@@ -129,6 +253,8 @@ plug-and-play \citep{breto09,he10}.
 \item Similar ideas have been called equation-free and likelihood-free.
   \end{myitemize}
 
+
+  
 \end{frame}
 
 \begin{frame}
@@ -236,7 +362,7 @@ $
 
   \begin{myitemize}
   \item
-    We aim to make each replicate track the data in a weak sense that does not involve a solution to the full filtering problem.
+    We aim to make each replicate track the data in a weak sense, easier and more scalable than solving the full filtering problem.
 
 \vspace{3mm}
 
@@ -249,8 +375,11 @@ $f_{\vec{X}_{\time}|\vec{Y}_{\time},\vec{X}_{\time-1}}
 
 \vspace{3mm}
 
-  \item The adapted bagged filter (ABF) algorithm uses importance sampling to carry out adapted simulation on each replicate.
+  \item The adapted bagged filter (ABF) algorithm uses importance sampling to carry out adapted simulation on each replicate, with a sample size $\Np$.
 
+    \vspace{3mm}
+    
+  \item Importance sampling for adapted simulation does NOT bypass the curse of dimensionality. We later combine it with intermediate resampling to give scalability.
 
 \vspace{3mm}
 
@@ -367,13 +496,27 @@ $
 
 \begin{frame}{A guide function for intermediate resampling}
 
-ABF and ABF-IR:    particles per replicate,  $\Np$\\
-ABF-IR: number of intermediate timesteps, $\Ninter$ \\
-ABF-IR: measurement variance parameterizations, ${\VtoTheta}_{\unit\comma\time}$ and ${\thetaToV}_{\unit\comma\time}$\\
-    ABF-IR: approximate process and observation mean functions, $\vec{\mu}$ and $h_{\unit\comma\time}$\\
+  \begin{myitemize}
 
+  \item Intermediate resampling with an ideal guide function can beat the curse of dimensionality \citep{park20}.
 
-  
+    \vspace{3mm}
+    
+  \item  It is consistent for any guide function, but scalability is limited in practice since the ideal guide is generally intractable.
+
+    \vspace{3mm}
+    
+    \item In practice, we use moment-matching to approximate the ideal guide for Gaussian models. 
+
+      \vspace{3mm}
+      
+    \item New algorithmic parameters:\\
+      number of intermediate timesteps, $\Ninter$ \\
+      measurement variance parameterizations, ${\VtoTheta}_{\unit\comma\time}$ and ${\thetaToV}_{\unit\comma\time}$\\
+      approximate process and observation mean functions, $\vec{\mu}$ and $h_{\unit\comma\time}$\\
+
+      \end{myitemize}
+
 \end{frame}
 
   
