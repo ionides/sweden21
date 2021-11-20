@@ -20,6 +20,19 @@
 \newcommand\MainFigureMeaslesScaling{2}
 \newcommand\MainFigureMeaslesSlice{3}
 
+%% for algorithm pseudocode
+\usepackage{enumerate,alltt,xstring}
+%\usepackage[ruled,noline,linesnumbered]{algorithm2e}
+\usepackage[ruled,noline]{algorithm2e}
+\SetKwFor{For}{for}{do}{end}
+\SetKwFor{While}{while}{do}{end}
+\SetKwInput{KwIn}{input}
+\SetKwInput{KwOut}{output}
+\SetKwInput{KwCplx}{complexity}
+\SetKwInput{KwIndices}{note}
+\SetKwBlock{Begin}{procedure}{}
+\DontPrintSemicolon
+
 %\newcommand\SuppFigureMeaslesSharedSlice{\eic{TODO}}
 
 \newcommand\SuppSecGeneralization{S1}
@@ -88,6 +101,7 @@
 \newcommand\gir{G}
 \newcommand\altAltTime{m}
 
+\newcommand\myvec[1]{\boldsymbol{#1}}
 
 \newcounter{wwii}
 \setcounter{wwii}{1}
@@ -273,7 +287,7 @@
 %\newtheorem{fact}{Fact}  
 \newtheorem{assumption}{Assumption}
 \newtheorem{assumptionB}{Assumption}
-\newtheorem{procedure}{Procedure}
+%\newtheorem{procedure}{Procedure}
 \renewcommand\theassumption{A\arabic{assumption}}
 \renewcommand\theassumptionB{B\arabic{assumptionB}}
 
