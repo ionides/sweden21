@@ -1,0 +1,881 @@
+%\documentclass[handout]{beamer}
+\documentclass{beamer}
+
+\usepackage{amsmath,amsfonts,amssymb,graphicx} 
+\input{header.tex}
+\input{header-ms.tex}
+\input{theorems1.tex}
+
+\begin{document}
+
+\begin{frame}
+\begin{center}
+  {\Large\bf Bagging and blocking: Inference via particle filters for interacting dynamic systems}
+  
+%% Infectious disease transmission is a nonlinear partially observed stochastic dynamic system with topical interest. For low-dimensional systems, models can be fitted to time series data using Monte Carlo particle filter methods. As dimension increases, for example when analyzing epidemics among multiple spatially coupled populations, basic particle filter methods rapidly degenerate. A collection of independent Monte Carlo calculations can be combined to give a global filtering solution with favorable theoretical scaling properties. The independent Monte Carlo calculations are called bootstrap replicates, and their aggregation is called a bagged filter. Bagged filtering is effective at likelihood evaluation for a model of measles transmission within and between cities. A blocked particle filter also works well at this task. Bagged and blocked particle filters can both be coerced into carrying out likelihood maximization by iterative application to an extension of the model that has stochastically perturbed parameters. Numerical results are carried out using the R package spatPomp.
+
+\vspace{2mm}
+
+Edward Ionides\\
+University of Michigan, Department of Statistics
+
+\vspace{8mm}
+
+Algorithms \& Computationally Intensive Inference seminar\\
+University of Warwick
+\\
+Friday November 26, 2021
+\\
+
+\hspace{3mm}
+
+Slides are at \url{https://ionides.github.io/talks/warwick21.pdf}
+%% 8:15am EST
+
+\vspace{8mm}
+
+Collaborators:\\
+Kidus Asfaw, Ning Ning, Joonha Park and Aaron King\\
+
+\end{center}
+
+\end{frame}
+
+
+\newcommand\challengeSep{\vspace{3mm}}
+
+
+\begin{frame}
+  \frametitle{Outline}
+
+  
+  \myemph{The curse of dimensionality}. Particle filter (PF) methods are effective for inference on low-dimensional nonlinear partially observed stochastic dynamic systems. They scale exponentially badly.
+
+  \challengeSep
+  
+  \myemph{Bagged filters}. Combining independent Monte Carlo filters.
+
+  \vspace{1mm}
+  
+  \begin{myitemize}
+  \item Unadapted bagged filter (UBF)
+  \item Adapted bagged filter (ABF)
+    \item Adapted bagged filter with intermediate resampling (ABF-IR)
+  \end{myitemize}
+
+  \challengeSep
+
+  \myemph{Blocked particle filter} (BPF). Theory by \citet{rebeschini15}. Independently proposed by \citet{ng02}.
+
+  \challengeSep
+
+  \myemph{From filtering to inference}. Iterated filtering using stochastically perturbed parameters.
+
+  \challengeSep
+
+  \myemph{Metapopulation dynamics}. Bagged and blocked filters work on collections of weakly coupled populations, in theory and practice.
+
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{What is a SpatPOMP?}
+
+  \myemph{POMP} models are partially observed Markov processes, also known as state space models or hidden Markov models.
+
+  \vspace{6mm}
+  
+  \myemph{SpatPOMP} models are POMP models with a unit structure.
+
+    \vspace{6mm}
+ 
+  \myemph{Latent Markov process}: $X_{\unit\comma\time}=X_{\unit}(t_\time)$, \hspace{1mm} $\unit\in 1{\mycolon}\Unit$, \hspace{1mm} $\time\in 1{\mycolon}\Time$
+
+    \vspace{6mm}
+ 
+  \myemph{Observation process}: $Y_{\unit\comma\time}$ depends only on $X_{\unit\comma\time}$
+
+    \vspace{6mm}
+ 
+The units could be a metapopulation, say cities in an epidemic model.
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{$U=40$ units for a coupled measles SEIR model}
+
+\vspace{-2.7mm}
+
+\begin{center}
+\includegraphics[width=8cm]{slice_image_plot-1.pdf}
+\end{center}
+
+\vspace{-3mm}
+
+{\bf A}. Simulated Susceptible-Exposed-Infected-Recovered dynamics coupled with a gravity model (log of biweekly reported cases).
+
+{\bf B}. Measles UK pre-vaccination case reports for the 40 largest cities.
+
+
+
+
+%\end{center}
+
+\end{frame}
+
+\begin{frame}{Particle filter (PF)}
+
+  \begin{columns}
+    \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Evolutionary analogy}}
+
+      \vspace{5mm}
+      
+      {\bf Mutation}
+
+      $\downarrow$
+
+      {\bf Fitness}
+
+      $\downarrow$
+
+      {\bf Natural selection}
+      
+      \end{center}
+    \end{column}
+     \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Particle filter algorithm}}
+
+      \vspace{5mm}
+      
+      {\bf Predict: stochastic dynamics}
+
+      $\downarrow$
+
+      {\bf Measurement: weight}
+
+      $\downarrow$
+
+      {\bf Filter: resample}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \vspace{15mm}
+  
+    \begin{myitemize}
+  \item PF is an evolutionary algorithm with good mathematical properties: an unbiased likelihood estimate and consistent latent state distribution.
+  \end{myitemize}
+
+\end{frame}
+  
+\begin{frame}{Block particle filter (BPF)}
+
+  \begin{columns}
+    \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Evolutionary analogy}}
+
+      \vspace{5mm}
+      
+      {\bf Mutation}
+
+      $\downarrow$
+
+      {\bf Fitness\\
+      for each chromosome}
+
+      $\downarrow$
+
+      {\bf Natural selection\\
+      for each chromosome}
+
+      $\downarrow$
+
+      {\bf Recombine chromosomes}
+      
+      \end{center}
+    \end{column}
+     \begin{column}{0.48\linewidth}
+      \begin{center}
+      {\bf \textcolor{blue}{Block particle filter}}
+
+      \vspace{5mm}
+      
+      {\bf Predict: stochastic dynamics}
+
+      $\downarrow$
+
+      {\bf Measurement: weight\\
+      for each block}
+
+      $\downarrow$
+
+      {\bf Filter: resample\\
+      for each block}
+
+      $\downarrow$
+
+      {\bf Recombine blocks}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \vspace{10mm}
+  
+    \begin{myitemize}
+    \item Blocks in BPF allow recombination (reassortment of chromosomes in sexual reproduction) in the evolutionary analogy.
+\item Blocks are a partition of the spatial units. 
+  \end{myitemize}
+
+\end{frame}
+
+\begin{frame}{Anticipated limitations of BPF}
+
+\citet{rebeschini15} proved an asymptotic limit where BPF beats the curse of dimensionality but were modest in their applied hopes since blocks small enough to be practical might give unacceptable bias.
+
+\vspace{8mm}
+
+\begin{myitemize}
+\item \textcolor{blue}{``not anticipated to be applicable to real high-dimensional
+  problems''}
+
+  \vspace{5mm}
+  
+\item \textcolor{blue}{``it is far from clear whether this simple algorithm is of immediate practical utility in the most complex real-world applications''}
+
+\end{myitemize}
+
+\vspace{8mm}
+
+Thus we look for algorithms without this weakness which also have provable scalability.
+
+\end{frame}
+
+\newcommand\PPlist{\vspace{2mm}}
+\begin{frame}{Plug-and-play methods for implicit models}
+  \begin{myitemize}
+
+  \item We address stochastic dynamic models where a simulator is available, but transition densities are not readily accessible.
+
+    \PPlist
+    
+\item These models have been called implicit \citep{diggle84}.
+
+    \PPlist
+
+  \item An algorithm that uses a simulator but not transition densities is called plug-and-play \citep{breto09,he10}.
+
+        \PPlist
+
+      \item Plug-and-play methods can be applied to implicit models.
+
+            \PPlist
+
+          \item Similar ideas have been called equation-free and likelihood-free.
+
+          \item BPF is plug-and-play.
+            
+          \item We now consider another scalable simple plug-and-play filter with different strengths and weaknesses to BPF.
+            
+  \end{myitemize}
+
+\end{frame}
+
+\begin{frame}
+  % UBF PSEUDOCODE uuuuuuuuuu
+\begin{algorithm}[H]
+  \caption{\bf Unadapted bagged filter (UBF).
+   }\label{alg:ubf}
+  \KwIn{
+    simulator for $f_{\myvec{X}_{\time}|\myvec{X}_{\time-1}}(\myvec{x}_{\time}\given \myvec{x}_{\time-1})$ and $f_{\myvec{X}_0}(\myvec{x}_0)$;
+    evaluator for $f_{{Y}_{\unit,\time}|{X}_{\unit,\time}}({y}_{\unit,\time}\given {x}_{\unit,\time})$;
+    data, $\data{\myvec{y}}_{1:\Time}$;
+    number of replicates, $\Rep$;
+    neighborhood structure, $B_{\unit,\time}$
+  }
+\For{$\rep\ \mathrm{in}\ \seq{1}{\Rep}$}{
+initialize simulation, $\myvec{X}_{0,\rep} \sim f_{\myvec{X}_0}(\cdot)$
+  \;
+  \nllabel{alg:ubf:for:n}
+\For{$\time\ \mathrm{in}\ \seq{1}{\Time}$}{
+simulate,
+    $\myvec{X}_{\time,\rep} \sim
+      f_{\myvec{X}_{\time}|\myvec{X}_{\time-1}}
+      \big( \mydot \given \myvec{X}_{\time-1,\rep}
+    \big)$
+  \nllabel{alg:ubf:adapted:proposals}
+  \;
+measurement weights,
+  $w^M_{\unit,\time,\rep}=
+    f_{Y_{\unit,\time}|X_{\unit,\time}}
+    \big (\data{y}_{\unit,\time}\given {X}_{\unit,\time,\rep}
+  \big)$
+%    for $\unit$ in $\seq{1}{\Unit}$
+  \;
+prediction weights,
+  $w^P_{\unit,\time,\rep}=\prod_{(\tilde \unit,\tilde n)\in B_{\unit,\time}} w^M_{\tilde\unit,\tilde n,\rep}$
+%    for $\unit$ in $\seq{1}{\Unit}$
+      \nllabel{alg:ubf:adapted:weights}
+  \;
+  }
+}
+%conditional log likelihood,
+  $\MC{\loglik}_{\unit,\time}= 
+    \log\left(
+      \sum_{\rep=1}^\Rep w^M_{\unit,\time,\rep}w^P_{\unit,\time,\rep}
+    \right)
+    -\log\left(
+      \sum_{\rep=1}^\Rep w^P_{\unit,\time,\rep}
+    \right)$
+%  for $\unit$ in $\seq{1}{\Unit}$, $\time$ in $\seq{1}{\Time}$
+  \;
+\KwOut{
+log likelihood estimate, $\MC{\loglik}= \sum_{\time=1}^\Time\sum_{\unit=1}^\Unit \MC{\loglik}_{\unit\comma\time}$\\
+}
+\end{algorithm}
+
+
+\end{frame}
+
+\newcommand\BFsep{\vspace{4mm}}
+
+\begin{frame}{Bagged filters}
+
+  \begin{myitemize}
+
+  \item {\bf Bagging} is bootstrap aggregating. The goal is to gain strength from many boostrap replicates.
+
+    \BFsep
+    
+  \item Simulating from a postulated model is a simple parametric bootstrap.
+
+    \BFsep
+    
+  \item To obtain scalability, we use local weights to aggregate the bootstrap replicates.
+
+    \BFsep
+    
+    \item The unadapted bagged filter is a fancy name for a simple algorithm.  We view it a starting point for adapted bagged filters.
+
+      \end{myitemize}
+  
+\end{frame}
+
+\begin{frame}
+
+  \frametitle{The unadapted bagged filter is not entirely naive}
+
+  \begin{myitemize}
+
+  \item UBF seems naive. Particle filter (PF) method are well known to scale better with $\Time$ than unconditional simulations.
+
+    \vspace{5mm}
+    
+  \item With modern computers, large numbers of simulations are feasible even when $\Unit$ and $\Time$ are not small.
+
+      \vspace{5mm}
+
+    \item Initially we studied UBF as a theoretical toy, since it is relatively easy to show theoretically that it can beat the curse of dimensionality as $U$ increases, for weakly coupled systems. Then we found it is competitive in practice on some models of interest.
+  \end{myitemize}
+
+\end{frame}
+
+\begin{frame}
+  \frametitle{Adapted simulation: An easier problem than filtering}
+
+  \begin{myitemize}
+  \item
+    We aim to make each replicate track the data in a weak sense, easier and more scalable than solving the full filtering problem.
+
+\vspace{3mm}
+
+  \item
+    The adapted simulation problem is to draw from
+$f_{\vec{X}_{\time}|\vec{Y}_{\time},\vec{X}_{\time-1}}
+  \big(
+    \vec{x}_{\time}\given \vec{\data{y}}_{\time},\vec{x}_{\time-1}
+  \big)$.
+
+\vspace{3mm}
+
+  \item The adapted bagged filter (ABF) algorithm uses importance sampling to carry out adapted simulation on each replicate, with a sample size $\Np$.
+
+    \vspace{3mm}
+    
+  \item Importance sampling for adapted simulation does NOT beat the curse of dimensionality.
+We combine it with intermediate resampling to give scalability.
+
+\vspace{3mm}
+
+    \item ABF calculates the likelihood using the proper weight restricted to a neighborhood.
+\end{myitemize}
+    
+\end{frame}
+
+
+
+\begin{frame}
+
+%\setlength\extrarowheight{5pt}
+\renewcommand{\arraystretch}{1.2}.
+\noindent\begin{tabular}{l}
+\hline
+{\bf 
+{ABF}. Adapted bagged filter.}\inputSpace\\
+\hline
+%{\bf input:} From Table~1 \inputSpace \\
+%\hline
+\firstLineSpace
+Initialize adapted simulation: $\vec{X}^{\IF}_{0,\rep} \sim f_{\vec{X}_0}(\vec{x}_0)$
+\\
+For $\time\ \mathrm{in}\ \seq{1}{\Time}$
+\\
+\asp  Proposals:
+    $\vec{X}_{\time,\rep,\np}^{\IP} \sim 
+    f_{\vec{X}_{\time}|\vec{X}_{\time-1}} 
+    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\rep}\big)$
+\\
+\asp Measurement weights:
+  $w^M_{\unit,\time,\rep,\np} = 
+    f_{Y_{\unit,\time}|X_{\unit\comma\time}} 
+    \big (\data{y}_{\unit\comma\time}\given X^{\IP}_{\unit\comma\time,\rep,\np}\big)$
+\\
+\asp  Adapted resampling weights:
+  $w^{\IF}_{\time,\rep,\np} = 
+    \prod_{\unit=1}^{\Unit} w^M_{\unit,\time,\rep,\np}$
+\\
+\asp
+      Resampling:
+        $\prob\big[\resampleIndex({\rep})=a \big] = w^{\IF}_{\time,\rep,a}
+  \Big( 
+  \sum_{\altNp=1}^{\Np} w^{\IF}_{\time,\rep,\altNp}
+  \Big)^{-1}$
+\\
+\asp 
+$\vec{X}^{\IF}_{\time,\rep} = \vec{X}^{\IP}_{\time,\rep,r(\rep)}$ 
+\\
+\asp % Prediction weights:
+  $w^{\LCP}_{\unit,\time,\rep,\np}= \displaystyle
+  \prod_{\altTime=1}^{\time-1}
+  \Big[
+    \frac{1}{\Np}\sum_{k=1}^{\Np}
+    \hspace{1mm}
+       \prod_{(\altUnit,\altTime)\in B^{[\altTime]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\altTime,\rep,k}
+  \Big] \prod_{(\altUnit,\time)\in B^{[\time]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\time,\rep,\np}$
+\\
+End for
+\\
+$\displaystyle \MC{\loglik}_{\unit,\time}= 
+\log\Bigg(
+\frac{
+\sum_{\rep=1}^\Rep \sum_{\np=1}^{\Np} w^M_{\unit,\time,\rep,\np}w^P_{\unit,\time,\rep,\np}
+}{
+\sum_{\rep=1}^\Rep \sum_{\np=1}^{\Np} w^P_{\unit,\time,\rep,\np}
+}
+\Bigg)
+$
+\rule[-8mm]{0mm}{10mm}
+\\
+\hline
+\end{tabular}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Intermediate resampling}
+
+
+
+\begin{myitemize}
+\item \myemph{Intermediate resampling} splits the time interval between observations into $\Ninter$ subintervals.
+
+\vspace{2mm}
+
+\item Reweighting and/or sampling at each subinterval uses a revised estimate of the anticipated measurement density at the end of the interval called a \myemph{guide function}.
+
+\vspace{2mm}
+
+\item This is applicable to continuous time models.
+
+\vspace{2mm}
+
+\item Intermediate resampling has useful theoretical and empirical properties \citep{delmoral15,park20}.
+
+\vspace{2mm}
+
+\item Intermediate resampling for adapted simulation within ABF gives the ABF-IR algorithm.
+
+\vspace{2mm}
+
+\item Intermediate resampling within PF gives the guided intermediate resampling filter (GIRF) of \citet{park20}, a generalization of the auxiliary particle filter of \citet{pitt99}.
+  
+\end{myitemize}
+
+\end{frame}
+
+
+\begin{frame}{A guide function for intermediate resampling}
+
+  \begin{myitemize}
+
+  \item Intermediate resampling with an ideal guide function can beat the curse of dimensionality \citep{park20}.
+
+    \vspace{3mm}
+    
+  \item  It is consistent for any guide function, but scalability is limited in practice since the ideal guide is generally intractable.
+
+    \vspace{3mm}
+    
+    \item In practice, we use moment-matching to approximate the ideal guide for Gaussian models. 
+
+      \vspace{3mm}
+      
+    \item Additional algorithmic parameters:\\
+
+      \vspace{1mm}
+      
+      number of intermediate timesteps, $\Ninter$ \\
+      measurement variance parameterizations, ${\VtoTheta}_{\unit\comma\time}$ and ${\thetaToV}_{\unit\comma\time}$\\
+      approximate process and observation mean functions, $\vec{\mu}$ and $h_{\unit\comma\time}$
+
+\vspace{3mm}
+      
+\item Guided intermediate resampling is plug-and-play: it does not need evaluation of transition densities.
+
+        \end{myitemize}
+
+\end{frame}
+
+  
+\begin{frame}
+
+  \resizebox{!}{45mm}{
+\noindent\begin{tabular}{l}
+\hline
+{\bf {ABF-IR}. ABF  with  intermediate resampling.} 
+\vspace{0.4mm} \\
+\hline
+\firstLineSpace
+Initialize adapted simulation: $\vec{X}^{\IF}_{0,\rep} \sim f_{\vec{X}_0}(\vec{x}_0)$
+\\
+For $\time\ \mathrm{in}\ \seq{1}{\Time}$
+\\
+\asp Guide simulations:
+    $\vec{X}_{\time,\rep,\npgir}^{G} \sim 
+    f_{\vec{X}_{\time}|\vec{X}_{\time-1}} 
+    \big( \vec{x}_{\time}\given \vec{X}^{\IF}_{\time-1,\rep} \big)$
+\\
+\asp Guide variance: $V_{\unit,\time,\rep}=
+      \var \big\{
+        h_{\unit\comma\time}\big( {X}_{\unit,\time,\rep,\npgir}^{G}\big), \npgir \mbox{ in } \seq{1}{\Npgir}
+      \big\}$ 
+\\
+\asp $\guideFunc^{\resample}_{\time,0,\rep,\np}=1 \; \; $ and
+$\; \vec{X}_{\time,0,\rep,\np}^{\GR}=\vec{X}^{\IF}_{\time-1,\rep}$
+\\
+\asp For $\ninter  \,\, \mathrm{in} \,\, \seq{1}{\Ninter}$
+\\
+\asp\asp Intermediate proposals:
+        ${\vec{X}}_{\time,\ninter,\rep,\np}^{\GP}
+          \sim {f}_{{\vec{X}}_{\time,\ninter}|{\vec{X}}_{\time,\ninter-1}}
+          \big(\mydot|{\vec{X}}_{\time,\ninter-1,\rep,\np}^{\GR}\big)$ 
+\\
+\asp\asp 
+        $\vec{\mu}^{\GP}_{\time,\ninter,\rep,\np} 
+           = \vec{\mu}\big( \vec{X}^{\GP}_{\time,\ninter,\rep,\np},t_{\time,\ninter},t_{\time} \big)$
+\\
+\asp\asp      %Measurement variance at skeleton: 
+        $V^{\mathrm{meas}}_{\unit,\time,\ninter,\rep,\np}
+           = \thetaToV_{\unit}(\theta,\mu^{\GP}_{\unit,\time,\ninter,\rep,\np})$
+%\\
+           %\asp\asp  %Process variance:
+           , \hspace{4mm}
+        $V^{\mathrm{proc}}_{\unit,\time,\ninter,\rep}
+          = V_{\unit,\time,\rep} \,
+          \big(t_{\time}-t_{\time,\ninter}\big) \Big/
+          \big(t_{\time}-t_{\time,0}\big)$ 
+\\
+\asp\asp
+%      Moment matching:
+        $\theta_{\unit,\time,\ninter,\rep,\np}= 
+          \VtoTheta_{\unit}\big(
+            V^{\mathrm{meas}}_{\unit,\time,\ninter,\rep,\np} + V^{\mathrm{proc}}_{\unit,\time,\ninter,\rep}, 
+            \, \mu^{\GP}_{\unit,\time,\ninter,\rep,\np}
+          \big)$
+\\
+\asp\asp  % Guide function: 
+        $
+\guideFunc_{\time,\ninter,\rep,\np}=
+          \prod_{\unit=1}^{\Unit}
+          f_{Y_{\unit,\time}|X_{\unit,\time}}
+          \big(
+            \data{y}_{\unit,\time}\given \mu^{\GP}_{\unit,\time,\ninter,\rep,\np} \giventh \theta_{\unit,\time,\ninter,\rep,\np} 
+          \big)$
+\\
+\asp\asp Guide weights:
+$w^G_{\time,\ninter,\rep,\np}= \guideFunc^{}_{\time,\ninter,\rep,\np}
+         \big/ \guideFunc^{\resample}_{\time,\ninter-1,\rep,\np}$
+\\
+\asp\asp
+      Resampling:
+        $\prob\big[\resampleIndex({\rep,\np})=a \big] = w^G_{\time,\ninter,\rep,a}
+\Big( \sum_{\altNp=1}^{\Np}w^G_{\time,\ninter,\rep,\altNp}\Big)^{-1}$
+\\
+\asp\asp
+        $\vec{X}_{\time,\ninter,\rep,\np}^{\GR}=\vec{X}_{\time,\ninter,\rep,\resampleIndex({\rep,\np})}^{\GP}\; \; $ and
+        $\; \guideFunc^{\resample}_{\time,\ninter,\rep,\np}= \guideFunc^{}_{\time,\ninter,\rep,\resampleIndex({\rep,\np})}\,$
+\\
+\asp
+End For
+\\
+\asp
+  Set $\vec{X}^{\IF}_{\time,\rep}=\vec{X}^{\GR}_{\time,\Ninter,\rep,1}$ 
+\\ 
+\asp Measurement weights:
+  $w^M_{\unit,\time,\rep,\npgir} = 
+    f_{Y_{\unit,\time}|X_{\unit,\time}} 
+    \big (\data{y}_{\unit,\time}\given X^{G}_{\unit,\time,\rep,\npgir} \big)$
+\\
+\asp % Prediction weights:
+  $w^{\LCP}_{\unit,\time,\rep,\npgir}= \displaystyle
+  \prod_{\altTime=1}^{\time-1}
+  \Big[
+    \frac{1}{\Npgir}\sum_{a=1}^{\Npgir}
+    \hspace{1mm}
+       \prod_{(\altUnit,\altTime)\in B^{[\altTime]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\altTime,\rep,a}
+  \Big] \prod_{(\altUnit,\time)\in B^{[\time]}_{\unit,\time}} 
+    \hspace{-1mm}
+        w^M_{\altUnit,\time,\rep,\npgir}$
+\\
+End for
+\\
+$\displaystyle \MC{\loglik}_{\unit,\time}= 
+\log\Bigg(
+\frac{
+\sum_{\rep=1}^\Rep \sum_{\npgir=1}^{\Npgir} w^M_{\unit,\time,\rep,\npgir}w^P_{\unit,\time,\rep,\npgir}
+}{
+\sum_{\rep=1}^\Rep \sum_{\npgir=1}^{\Npgir} w^P_{\unit,\time,\rep,\npgir}
+}
+\Bigg)
+$
+\vspace{1mm}
+\\
+\hline
+\end{tabular}
+}
+\end{frame}
+
+\begin{frame}
+  \frametitle{Software for SpatPOMP models}
+
+
+  \newcommand\spatpompsep{\vspace{3mm}}
+  
+  \begin{myitemize}
+    
+  \item We use the \code{asif}, \code{asifir}, \code{bpfilter}, \code{enkf} and \code{girf} implementations in the  R package \code{spatPomp} \citep{asfaw20github}.
+
+    \spatpompsep
+    
+\item All these algorithms are plug-and-play. This facilitates implementations applicable to a wide class of models: SpatPOMPs that can be simulated.
+   
+      \spatpompsep
+
+  \item \code{spatPomp} offers a class `\code{spatPomp}' that extends the `\code{pomp}' class for POMP models in the R package \code{pomp} \citep{king16}.
+
+    \spatpompsep
+
+\item All methods available in \code{pomp} can formally be applied to `\code{spatPomp}' objects, though they may not be practically effective for spatiotemporal POMPs.
+
+    \end{myitemize}
+    
+\end{frame}
+
+\begin{frame}
+\frametitle{Filtering $U$-dimensional correlated Brownian motion}
+
+\vspace{-3mm}
+
+\begin{center}
+\includegraphics[width=10cm]{bm_alt_plot-1.pdf}
+
+\vspace{-1mm}
+
+$\cov\big(X_{\unit,\time}-X_{\unit,\time-1},X_{\altUnit,\time}-X_{\altUnit,\time-1}\big) \sim 0.4^{|\unit-\altUnit|}_{}$
+
+\end{center}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Filtering $U$ units of a coupled measles SEIR model}
+
+\vspace{-3mm}
+
+\begin{center}
+\includegraphics[width=10cm]{mscale_loglik_plot-1.pdf}
+
+
+\end{center}
+
+\vspace{-2mm}
+
+Simulated data using a gravity model with geography, demography and transmssion parameters corresponding to UK pre-vaccination measles.
+
+%\end{center}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Filtering $U$ units of Lorenz 96 toy atmospheric model} 
+
+\vspace{-3mm}
+
+\begin{center}
+\includegraphics[width=10cm]{lz_loglik_plot-1.pdf}
+
+\vspace{-1mm}
+
+$dX_{\unit}(t) = \big \{  X_{\unit-1}(t) \big(X_{\unit+1}(t) - X_{\unit-2}(t)\big) - X_{\unit}(t) + F \big\} dt + \sigma \, dB_{\unit}(t)$
+
+\end{center}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{From filtering to parameter inference}
+
+\newcommand\inferencSep{\vspace{2.5mm}}
+
+\begin{myitemize}
+\item Log likelihood evaluation in principle enables likelihood-based or Bayesian inference.
+
+\inferencSep
+
+\item Iterated filtering for PF \citep{ionides15} and GIRF \citep{park20} maximizes the likelihood by randomly perturbing the parameters. 
+
+\inferencSep
+
+\item Particle Markov chain Monte Carlo can be applied with any likelihood estimate \citep{andrieu10}. It is numerically intractable when Monte Carlo estimates are costly and noisy.
+
+\inferencSep
+
+\item Iterated filtering is harder for bagged filters; it is possible but expensive \citep{ionides21}.
+
+  \inferencSep
+  
+\item Iterated filtering works well for BPF when parameters are unit-specific, i.e., each city has its own parameters \citep{ning21-ibpf}.
+It also can work with shared parameters (current unpublished work).
+
+\end{myitemize}
+
+\end{frame}
+
+\begin{frame}{An iterated block particle filter for unit-specific parameters}
+
+
+  \begin{center}
+    
+  \includegraphics[trim={0 0 0 10mm},clip,width=9cm]{IBPF_workflow.pdf}
+
+
+  \end{center}
+  
+\end{frame}
+
+
+\begin{frame}
+
+\frametitle{Measles likelihood slices for coupling parameter, $G$}
+
+\vspace{-5mm}
+
+\begin{columns}[T] % align columns
+\begin{column}{.55\textwidth}
+  \includegraphics[width=6cm]{slice_combined_plot-1.pdf}
+\end{column}
+\begin{column}{.52\textwidth}
+
+  \vspace{6mm}
+  
+  Simulating $15$ year of data from $U=40$ cities for the measles model.
+  Slice likelihood, varying $G$ with other paramters fixed at the truth.
+
+  \vspace{7mm}
+
+  {\bf A}. Evaluation using ABF.
+
+    \vspace{4mm}
+
+  {\bf B}. Evaluation using BPF.
+
+    \vspace{4mm}
+
+  {\bf C}. Evaluation using EnKF.
+
+  
+\end{column}
+\end{columns}
+
+\end{frame}
+
+\begin{frame}{Convergence of UBF, ABF \& ABF-IR \citep{ionides21}}
+\begin{theorem}  \label{thm:tif}
+Let $\MC{\loglik}$ denote the Monte Carlo likelihood approximation constructed by UBF, ABF or ABF-IR.
+Consider a limit with a growing number of replicates, $\Rep\to\infty$.
+Suppose regularity assumptions listed in the paper.
+There are quantities $\el(\Unit,\Time) = O(1)$ and $V(\Unit,\Time)=O(\Unit^2\Time^2)$ such that
+\begin{equation}
+%\label{th1:lik:bound}
+\nonumber
+\Rep^{1/2}\big[ \MC{\loglik}-\loglik-\el\Unit\Time \big]  \xrightarrow[\Rep \rightarrow \infty]{d} \normal\big[0,V\big],
+\end{equation}
+where $\xrightarrow[\Rep \rightarrow \infty]{d}$ denotes convergence in distribution and $\normal[\mu,\Sigma]$ is the normal distribution with mean $\mu$ and variance $\Sigma$.
+If an additional spatiotemporal mixing assumption holds, we obtain an improved variance bound
+\begin{equation}
+%\label{th1:lik:bound2}
+\nonumber
+%V < \ThmOneVarBound.
+V(\Unit,\Time) = O(\Unit\Time)
+\end{equation}
+\end{theorem}
+\end{frame}
+
+\begin{frame}{Future work}
+
+  \newcommand\futuresep{\vspace{3mm}}
+  
+  \begin{myitemize}
+  \item We are getting close to the point where we can carry out likelihood-based inference for a flexible class of SpatPOMP models for measles.
+Flexibility supports generation and testing of scientific hypotheses.
+        
+    \futuresep
+    
+  \item Measles was previously a motivating model system for POMP methods for single populations.
+
+    \futuresep
+    
+    \item Many systems in ecology, epidemiology and elsewhere could be studied in a SpatPOMP framework \citep{bjornstad01}.
+    
+\end{myitemize}
+
+\end{frame}
+
+\begin{frame}[allowframebreaks]
+\frametitle{References}
+\bibliographystyle{apalike}
+\bibliography{bib-sweden}
+\end{frame}
+
+\end{document}
