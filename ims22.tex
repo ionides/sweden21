@@ -68,10 +68,10 @@ Kidus Asfaw, Ning Ning, Joonha Park, Jesse Wheeler and Aaron King
 
 \begin{frame}{Example: Pre-vaccination measles in England \& Wales}
 
-\vspace{-3mm}
+\vspace{-2mm}
 
 \begin{center}
-\includegraphics[width=8.5cm]{he10-data.pdf}
+\includegraphics[width=8.4cm]{he10-data.pdf}
 
 
 \end{center}
@@ -374,17 +374,6 @@ Results from Ionides et al (2021, {\it JASA}). We computed a slice due to lack o
 \end{frame}
 
 
-\begin{frame}{An iterated block particle filter for parameter estimation}
-
-
-  \begin{center}
-    
-  \includegraphics[trim={0 0 0 10mm},clip,width=9cm]{IBPF_workflow.pdf}
-
-
-  \end{center}
-  
-\end{frame}
 
 
 \begin{frame}{Scalability needed for practical inference}
@@ -410,55 +399,84 @@ A moderate numbers of spatial units is enough to open new possibilities.
   \end{itemize}
 
   \end{frame}
- 
+
+\begin{frame}{An iterated block particle filter for parameter estimation}
+
+
+  \begin{center}
     
-\begin{frame}{Auto-regression of spatial perturbations for shared parameters}
+  \includegraphics[trim={0 0 0 10mm},clip,width=9cm]{IBPF_workflow.pdf}
 
-\vspace{-10mm}
 
-\begin{center}
-\includegraphics[width=8.5cm]{ibpf/boxplot-spat-reg.pdf}
-
-\end{center}
-
-\vspace{-2mm}
+  \end{center}
   
 \end{frame}
 
-\begin{frame}{Random perturbations must be smaller to match larger number  $(20\times 13)$ of parameters}
-    
-\vspace{-10mm}
+\begin{frame}
 
-\begin{center}
-\includegraphics[width=8.5cm]{ibpf/boxplot-rw-sd.pdf}
+\vspace{-6mm}
 
-\end{center}
+\begin{columns}[T] % align columns
+\begin{column}{.75\textwidth}
+  \includegraphics[width=6.8cm]{ibpf/search_diagnostics-1.pdf}
+\end{column}
 
-\vspace{-2mm}
+\hspace{-15mm}
+\begin{column}{.35\textwidth}
+  \vspace{10mm}
   
+$\bullet$    IBPF applied to simulations and data.
+
+    \vspace{5mm}
+
+$\bullet$    Multiple searches from random starting points.
+
+    \vspace{5mm}
+    
+$\bullet$    Top 25\% of searches are subsequently refined.
+    
+  \end{column}
+\end{columns}
+
 \end{frame}
 
-\begin{frame}{Likelihood on benchmark problems with 20 towns}
 
-  %% results: see v8-analysis, x4_analysis and x6-analysis
+\begin{frame}
+
+\begin{columns}[T] % align columns
+\begin{column}{.75\textwidth}
+  \includegraphics[width=7.5cm]{ibpf/sim_search_boxplot-1.pdf}
+
+    \includegraphics[width=7.5cm]{ibpf/data_search_boxplot-1.pdf}
+
+  \end{column}
+
+\hspace{-15mm}
+\begin{column}{.35\textwidth}
+  \vspace{5mm}
   
-\begin{tabular}{l|rrr}
-  &   Simulation & UK measles & $p$\\
-  \hline
-Benchmark & -35041 & -40345 & \\ 
-4/13 parameters unit-specific & -35052 & -43069 & $4\times 20+9$\\
-12 parameters unit-specific & -35115 & -40641& $12\times 20+1$\\
+$\bullet$    IBPF applied to simulations and data.
 
-\end{tabular}
+    \vspace{5mm}
 
-\vspace{4mm}
-\bi
-\item Simulated data: benchmark is likelihood at truth. Optimization used 10hr on one node.
-\item Actual data: benchmark is likelihood from uncoupled model with all parameters unit-specific, and a parameter for immigration rate of new cases. Optimization used $2\times 10$hr on one node.
+$\bullet$    Multiple search refinements.
 
-  \ei
+    \vspace{5mm}
+    
+    (A) Mostly shared parameters.
 
-  \end{frame}
+    \vspace{5mm}
+
+    (B) All unit-specific parameters
+
+    \vspace{5mm}
+
+    (C) all unit-specific, without coupling
+    
+  \end{column}
+\end{columns}
+
+\end{frame}
 
 \begin{frame}
 \frametitle{Filtering $U$-dimensional correlated Brownian motion}
@@ -499,7 +517,7 @@ $dX_{\unit}(t) = \big \{  X_{\unit-1}(t) \big(X_{\unit+1}(t) - X_{\unit-2}(t)\bi
   \newcommand\futuresep{\vspace{3mm}}
   
   \begin{myitemize}
-  \item We are getting close to the point where we can carry out likelihood-based inference for a flexible class of metapopulation models for measles.
+  \item We are reaching to the point where we can carry out likelihood-based inference for a flexible class of metapopulation models for measles.
 Flexibility supports generation and testing of scientific hypotheses.
         
     \futuresep
@@ -510,7 +528,9 @@ Flexibility supports generation and testing of scientific hypotheses.
     
   \item Many systems in ecology, epidemiology and elsewhere could be studied in a SpatPOMP framework. Including microbiomes?
 
-    \item Modeling and inference for nonlinear stochastic dynamics is hard. But, if you can't build a quantitative statistical model then you don't understand it and you can't control it?
+     \futuresep
+
+   \item Modeling and inference for nonlinear stochastic dynamics is hard. But, if you can't build a quantitative statistical model then you don't understand it and you can't control it?
     
 \end{myitemize}
 
